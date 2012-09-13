@@ -23,6 +23,8 @@ var JSORM = {
 
 		if(!JSORM.Initialised) {
 			JSORM.Model.prototype.manager = JSORM.manager;
+			JSORM.LiveObject.prototype.save = JSORM.Save;
+			JSORM.LiveObject.prototype.remove = JSORM.Remove;
 		}
 	},
 
@@ -30,9 +32,8 @@ var JSORM = {
 
 
 	FieldTypes: {
-		TextField: function(name, size, nullable) {
+		BitField: function(name, nullable) {
 			this.name = name;
-			this.size = size;
 			this.nullable = nullable;
 		},
 
@@ -43,6 +44,12 @@ var JSORM = {
 
 		DateField: function(name, nullable) {
 			this.name = name;
+			this.nullable = nullable;
+		},
+
+		TextField: function(name, size, nullable) {
+			this.name = name;
+			this.size = size;
 			this.nullable = nullable;
 		},
 
@@ -246,143 +253,141 @@ var JSORM = {
 
 
 	LiveObject: function(data) {
-		var liveObjectThis = this;
-		
 		this.__original_data = data;
 
 		for(var item in data) {
 			this[item] = data[item];
 		}
+	},
 
 
-		this.remove = function(successCallback, failureCallback) {
-			var sqlScript = [];
-			var queryParams = [];
-			var model = liveObjectThis.model;
+	Remove: function(successCallback, failureCallback) {
+		var sqlScript = [];
+		var queryParams = [];
+		var model = this.model;
 
-			sqlScript.push('DELETE FROM [' + model.config.name + '] ' );
-			sqlScript.push(' WHERE ');
+		sqlScript.push('DELETE FROM [' + model.config.name + '] ' );
+		sqlScript.push(' WHERE ');
 
-			sqlScript.push('[' + model.config.id + ']=? ');
-			queryParams.push(liveObjectThis[model.config.id]);
+		sqlScript.push('[' + model.config.id + ']=? ');
+		queryParams.push(this[model.config.id]);
 
-			var commandToExecute = sqlScript.join('');
+		var commandToExecute = sqlScript.join('');
 
-			model.database.transaction( function(tx) {
-				console.log(commandToExecute);
-				console.log(queryParams);
+		model.database.transaction( function(tx) {
+			console.log(commandToExecute);
+			console.log(queryParams);
 
-				tx.executeSql(
-					commandToExecute,
-					queryParams,
-					function(t, data) {
-						if(data.rowsAffected == 1) {
-							
-						}
-					},
-					function(t, error) {
+			tx.executeSql(
+				commandToExecute,
+				queryParams,
+				function(t, data) {
+					if(data.rowsAffected == 1) {
 						
 					}
-				);
-			}, function(a, error) {
-				// transaction fail
-				failureCallback(error);
-			}, function() {
-				// success
-				successCallback();
-			});
-		};
-
-
-		this.save = function(successCallback, failureCallback) {
-			var __changedFields = [];
-			var sqlScript = [];
-			var queryParams = [];
-			var changed = false;
-			var model = liveObjectThis.model;
-
-			if(liveObjectThis[liveObjectThis.model.config.id] === null) {
-				changed = true;
-				//
-				// INSERT
-				//
-				sqlScript.push('INSERT INTO [' + model.config.name + '] (' );
-				//
-				// fieldindex 0 is always the ID
-				//
-				for(var fieldIndex = 1; fieldIndex < model.attachedFields.length; fieldIndex++) {
-					if(fieldIndex > 1) {
-						sqlScript.push(', ');
-					}
-					sqlScript.push('[' + model.attachedFields[fieldIndex].name + ']');
+				},
+				function(t, error) {
+					
 				}
-				sqlScript.push(') VALUES (');
+			);
+		}, function(a, error) {
+			// transaction fail
+			failureCallback(error);
+		}, function() {
+			// success
+			successCallback();
+		});
+	},
 
-				for(fieldIndex = 1; fieldIndex < model.attachedFields.length; fieldIndex++) {
-					if(fieldIndex > 1) {
-						sqlScript.push(', ');
-					}
-					sqlScript.push(' ? ');
-					queryParams.push(liveObjectThis[model.attachedFields[fieldIndex].name]);
+
+	Save: function(successCallback, failureCallback) {
+		var __changedFields = [];
+		var sqlScript = [];
+		var queryParams = [];
+		var changed = false;
+		var model = this.model;
+
+		if(this[this.model.config.id] === null) {
+			changed = true;
+			//
+			// INSERT
+			//
+			sqlScript.push('INSERT INTO [' + model.config.name + '] (' );
+			//
+			// fieldindex 0 is always the ID
+			//
+			for(var fieldIndex = 1; fieldIndex < model.attachedFields.length; fieldIndex++) {
+				if(fieldIndex > 1) {
+					sqlScript.push(', ');
 				}
-
-				sqlScript.push(');');
-			} else {
-				//
-				// UPDATE
-				//
-				sqlScript.push('UPDATE [' + model.config.name + '] SET ' );
-
-				model.attachedFields.forEach(
-					function(__loopField) {
-						//
-						// check if field has changed
-						//
-						if(liveObjectThis[__loopField.name] != liveObjectThis.__original_data[__loopField.name]) {
-							sqlScript.push('[' + __loopField.name + ']=?');
-							queryParams.push(liveObjectThis[__loopField.name]);
-							changed = true;
-						}
-					}
-				);
-
-				sqlScript.push(' WHERE [' + model.config.id + ']=?');
-				queryParams.push(liveObjectThis[model.config.id]);
+				sqlScript.push('[' + model.attachedFields[fieldIndex].name + ']');
 			}
-			//
-			// nothing to save
-			//
-			if(!changed) {
-				successCallback();
-				return;
+			sqlScript.push(') VALUES (');
+
+			for(fieldIndex = 1; fieldIndex < model.attachedFields.length; fieldIndex++) {
+				if(fieldIndex > 1) {
+					sqlScript.push(', ');
+				}
+				sqlScript.push(' ? ');
+				queryParams.push(this[model.attachedFields[fieldIndex].name]);
 			}
 
-			var commandToExecute = sqlScript.join('');
+			sqlScript.push(');');
+		} else {
+			//
+			// UPDATE
+			//
+			sqlScript.push('UPDATE [' + model.config.name + '] SET ' );
 
-			model.database.transaction( function(tx) {
-				console.log(commandToExecute);
-				console.log(queryParams);
-
-				tx.executeSql(
-					commandToExecute,
-					queryParams,
-					function(t, data) {
-						if(data.rowsAffected == 1) {
-							if(data.insertId !== undefined) {
-								liveObjectThis[model.config.id] = data.insertId;
-							}
-						}
-					},
-					function(t, error) {
-						
+			model.attachedFields.forEach(
+				function(__loopField) {
+					//
+					// check if field has changed
+					//
+					if(this[__loopField.name] != this.__original_data[__loopField.name]) {
+						sqlScript.push('[' + __loopField.name + ']=?');
+						queryParams.push(this[__loopField.name]);
+						changed = true;
 					}
-				);
-			}, function(a, error) {
-				failureCallback(error);
-			}, function() {
-				successCallback();
-			});
-		};
+				}
+			);
+
+			sqlScript.push(' WHERE [' + model.config.id + ']=?');
+			queryParams.push(this[model.config.id]);
+		}
+		//
+		// nothing to save
+		//
+		if(!changed) {
+			successCallback();
+			return;
+		}
+
+		var commandToExecute = sqlScript.join('');
+
+		model.database.transaction( function(tx) {
+			console.log(commandToExecute);
+			console.log(queryParams);
+
+			tx.executeSql(
+				commandToExecute,
+				queryParams,
+				function(t, data) {
+					if(data.rowsAffected == 1) {
+						if(data.insertId !== undefined) {
+							this[model.config.id] = data.insertId;
+						}
+					}
+				},
+				function(t, error) {
+					
+				}
+			);
+		}, function(a, error) {
+			failureCallback(error);
+		}, function() {
+			successCallback();
+		});
 	}
 };
  
@@ -444,21 +449,20 @@ var YayFun = function() {
 			// success, data should be the row data
 			//
 			if(data !== null) {
-				alert(data.name);
-
-
+				console.log(data.name);
 				data.name = 'This is a new thing modified booa';
+
 				data.save(function() {
-					alert('saved');
+					console.log('saved booa');
 				}, function(error) {
-					alert(error.message);
+					console.log(error.message);
 				});
 			}
 		}, function(error) {
 			//
 			// get failed
 			//
-			alert(error.message);
+			console.log(error.message);
 		}
 	);
 
@@ -470,34 +474,34 @@ var YayFun = function() {
 	// test to get all items with an id below 5
 	//
 	Duck.manager.getAll( { id__lessthan: 5 }, function(data) {
-		alert('Number of items received: ' + data.length );
+		console.log('Number of items received: ' + data.length );
 	});
 
 	//
 	// test to get all items with a name of adam
 	//
 	Duck.manager.getAll( { name__contains: 'booa' }, function(data) {
-		alert('Number of items received for booa: ' + data.length );
+		console.log('Number of items received for booa: ' + data.length );
 
-		alert('removing item');
+		console.log('removing item');
 		if(data.length !== 0) {
 			data[0].remove(function() {
 				// success
-				alert('remove success');
+				console.log('remove success');
 			}, function() {
 				//
-				alert('remove fail');
+				console.log('remove fail');
 			});
 		}
 		
 	});
 	 
 
-	alert('testing insert');
+	console.log('testing insert');
 	var newThing = Duck.manager.create();
 	newThing.name = 'test insert';
 	newThing.save(function(data) {
-		alert('inserted ' + newThing.id);
+		console.log('inserted ' + newThing.id);
 	});
  
  
