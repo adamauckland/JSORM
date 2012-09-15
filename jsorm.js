@@ -11,14 +11,14 @@
 		 * Have we been initialised
 		 * @type {Boolean}
 		 */
-		Initialised: false,
+		initialised: false,
 
 
 		/**
 		 * [Error description]
 		 * @param {String} message Text to output
 		 */
-		Error: function(message) {
+		error: function(message) {
 			console.log('ERROR. ' + message);
 		},
 
@@ -27,7 +27,7 @@
 		 * [Log description]
 		 * @param {[type]} message [description]
 		 */
-		Log: function(message) {
+		log: function(message) {
 			console.log(message);
 		},
 
@@ -40,10 +40,10 @@
 		 * @param {Integer} dbBytes   Max bytes to allocate for DB
 		 */
 		Database: function(dbName, dbVersion, dbTitle, dbBytes) {
-			if(!JSORM.Initialised) {
+			if(!JSORM.initialised) {
 				JSORM.Model.prototype.manager = JSORM.manager;
-				JSORM.ModelItem.prototype.save = JSORM.Save;
-				JSORM.ModelItem.prototype.remove = JSORM.Remove;
+				JSORM.ModelItem.prototype.Save = JSORM.Save;
+				JSORM.ModelItem.prototype.Remove = JSORM.Remove;
 			}
 
 			this.config = {
@@ -83,6 +83,10 @@
 			BitField: function(name, nullable) {
 				this.name = name;
 				this.nullable = nullable;
+
+				this.value = function() {
+
+				}
 			},
 
 
@@ -138,7 +142,7 @@
 			 * Create a new instance of the model
 			 * @return {Parent Model Type}
 			 */
-			create: function() {
+			Create: function() {
 				var data = {};
 				this.model.attachedFields.forEach(
 					function(__loopField) {
@@ -158,7 +162,7 @@
 			 * @param  {[type]} criteria [description]
 			 * @return {[type]}
 			 */
-			buildSelect: function(criteria) {
+			BuildSelect: function(criteria) {
 				var sqlScript = [];
 				var queryParams = [];
 				var model = this.model;
@@ -244,16 +248,16 @@
 			 * @param  {function} failureCallback Function to call on fail
 			 * @return {Parent Model Type}
 			 */
-			get: function(criteria, successCallback, failureCallback) {
+			Get: function(criteria, successCallback, failureCallback) {
 				var model = this.model;
-				var buildSelect = model.manager.buildSelect(criteria);
+				var buildSelect = model.manager.BuildSelect(criteria);
 				var commandToExecute = buildSelect[0];
 				var queryParams = buildSelect[1];
 				var result = null;
 			
 				model.database.transaction( function(tx) {
-					JSORM.Log(commandToExecute);
-					JSORM.Log(queryParams);
+					JSORM.log(commandToExecute);
+					JSORM.log(queryParams);
 
 					tx.executeSql(
 						commandToExecute,
@@ -268,7 +272,7 @@
 							}
 						},
 						function(t, error) {
-							JSORM.Error(error);
+							JSORM.error(error);
 						}
 					);
 				}, function(a, error) {
@@ -296,16 +300,16 @@
 			 * @param  {function} failureCallback Function to call on fail
 			 * @return {Parent Model Type}
 			 */
-			getAll: function(criteria, successCallback, failureCallback) {
+			GetAll: function(criteria, successCallback, failureCallback) {
 				var model = this.model;
-				var buildSelect = model.manager.buildSelect(criteria);
+				var buildSelect = model.manager.BuildSelect(criteria);
 				var commandToExecute = buildSelect[0];
 				var queryParams = buildSelect[1];
 				var result = [];
 			
 				model.database.transaction( function(tx) {
-					JSORM.Log(commandToExecute);
-					JSORM.Log(queryParams);
+					JSORM.log(commandToExecute);
+					JSORM.log(queryParams);
 
 					tx.executeSql(
 						commandToExecute,
@@ -318,7 +322,7 @@
 							}
 						},
 						function(t, error) {
-							JSORM.Error(error);
+							JSORM.error(error);
 						}
 					);
 				}, function(a, error) {
@@ -404,8 +408,8 @@
 			var commandToExecute = sqlScript.join('');
 
 			model.database.transaction( function(tx) {
-				JSORM.Log(commandToExecute);
-				JSORM.Log(queryParams);
+				JSORM.log(commandToExecute);
+				JSORM.log(queryParams);
 
 				tx.executeSql(
 					commandToExecute,
@@ -416,7 +420,7 @@
 						}
 					},
 					function(t, error) {
-						JSORM.Error(error);
+						JSORM.error(error);
 					}
 				);
 			}, function(a, error) {
@@ -500,8 +504,8 @@
 			var commandToExecute = sqlScript.join('');
 
 			model.database.transaction( function(tx) {
-				JSORM.Log(commandToExecute);
-				JSORM.Log(queryParams);
+				JSORM.log(commandToExecute);
+				JSORM.log(queryParams);
 
 				tx.executeSql(
 					commandToExecute,
@@ -514,7 +518,7 @@
 						}
 					},
 					function(t, error) {
-						JSORM.Error(error);
+						JSORM.error(error);
 					}
 				);
 			}, function(a, error) {
@@ -577,7 +581,7 @@ var Tests = function() {
 	//
 	// now get the row at ID=1 in the duck table
 	//
-	Duck.manager.get({ id: 6 },
+	Duck.manager.Get({ id: 6 },
 		function(data) {
 			//
 			// success, data should be the row data
@@ -586,7 +590,7 @@ var Tests = function() {
 				console.log(data.name);
 				data.name = 'This is a new thing modified booa';
 
-				data.save(function() {
+				data.Save(function() {
 					console.log('saved booa');
 				}, function(error) {
 					console.log(error.message);
@@ -604,7 +608,7 @@ var Tests = function() {
 	//
 	// test to get all items with an id below 5
 	//
-	Duck.manager.getAll( { id__lessthan: 5 }, function(data) {
+	Duck.manager.GetAll( { id__lessthan: 5 }, function(data) {
 		console.log('Number of items received: ' + data.length );
 	});
 
@@ -612,12 +616,12 @@ var Tests = function() {
 	//
 	// test to get all items with a name of adam
 	//
-	Duck.manager.getAll( { name__contains: 'booa' }, function(data) {
+	Duck.manager.GetAll( { name__contains: 'booa' }, function(data) {
 		console.log('Number of items received for booa: ' + data.length );
 
 		console.log('removing item');
 		if(data.length !== 0) {
-			data[0].remove(function() {
+			data[0].Remove(function() {
 				// success
 				console.log('remove success');
 			}, function() {
@@ -633,9 +637,9 @@ var Tests = function() {
 	// test insert
 	//
 	console.log('testing insert');
-	var newThing = Duck.manager.create();
+	var newThing = Duck.manager.Create();
 	newThing.name = 'test insert';
-	newThing.save(function(data) {
+	newThing.Save(function(data) {
 		console.log('inserted ' + newThing.id);
 	});
 };
