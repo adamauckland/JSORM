@@ -71,6 +71,7 @@ Here's an example:
 		// test to get all items with an id below 5
 		//
 		Duck.manager.GetAll( { id__lessthan: 5 }, function(data) {
+			// data is an array of Row items (see   Duck.manager.Get() )
 			console.log('Number of items received: ' + data.length );
 		});
 
@@ -99,8 +100,16 @@ Here's an example:
 		// test insert
 		//
 		console.log('testing insert');
+		
+		//
+		// create a new instance
+		//
 		var newThing = Duck.manager.Create();
 		newThing.name = 'test insert';
+		
+		//
+		// save the item. This will cause an insert to execute as it has no id
+		// 
 		newThing.Save(function(data) {
 			console.log('inserted ' + newThing.id);
 		});
