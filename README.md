@@ -111,6 +111,9 @@ Here's an example:
 		// save the item. This will cause an insert to execute as it has no id
 		// 
 		newThing.Save(function(data) {
+			//
+			// the save function will update the original model instance with the new id
+			//
 			console.log('inserted ' + newThing.id);
 		});
 	};
