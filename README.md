@@ -25,15 +25,14 @@ Here's an example:
 
 
 		//
-		// now define the tables
+		// now define the table to model mapping
 		//
 		var Duck = new JSORM.Model(db, 'ducks');
-
-
-		// test overriding ID
-		//Duck.attachField(
-		//	new JSORM.FieldTypes.IntegerField('id', false)
-		//);
+		
+		//
+		// we default to a primary key of 'id' as int
+		// let's map a text field to the table
+		//
 		Duck.attachField(
 			new JSORM.FieldTypes.TextField('name', 50, false)
 		);
@@ -46,6 +45,8 @@ Here's an example:
 			function(data) {
 				//
 				// success, data should be the row data
+				// access the fields by using the fieldname as a property of the data object
+				// e.g. data.id or data.name
 				//
 				if(data !== null) {
 					console.log(data.name);
