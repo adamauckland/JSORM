@@ -83,10 +83,6 @@
 			BitField: function(name, nullable) {
 				this.name = name;
 				this.nullable = nullable;
-
-				this.value = function() {
-
-				}
 			},
 
 
