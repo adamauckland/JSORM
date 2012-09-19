@@ -13,6 +13,19 @@
 		 */
 		initialised: false,
 
+		/**
+		 * Has the database been created when we attempted to open it?
+		 * Use this parameter to know if we need to create the tables.
+		 * @type {Boolean}
+		 */
+		isNewDatabase: false,
+
+		/**
+		 * List of all declared model types
+		 * @type {Array}
+		 */
+		modelTypes: [],
+
 
 		/**
 		 * [Error description]
@@ -55,7 +68,8 @@
 			var self = this;
 			
 			this.createDatabase = function() {
-
+				console.log('No database');
+				JSORM.isNewDatabase = true;
 			};
 
 			this.openDatabase = function() {
@@ -67,6 +81,41 @@
 					self.createDatabase);
 				return self.DB;
 			};
+		},
+
+
+		CreateTables: function(model) {
+			if (!JSORM.isNewDatabase) {
+				JSORM.log('Not new database');
+				return;
+			}
+
+			JSORM.log('Is new database');
+
+			JSORM.modelTypes.forEach(function(loopModelType) {
+				JSORM.log('New model');
+				JSORM.log(loopModelType);
+
+				var sqlScript = [];
+				sqlScript.push('CREATE TABLE [' + loopModelType.config.name + '] (');
+
+				// push each field on
+				for(var fieldIndex = 0; fieldIndex < loopModelType.attachedFields.length; fieldIndex++) {
+					if(fieldIndex > 0) {
+						sqlScript.push(', ');
+					}
+					sqlScript.push('[' + loopModelType.attachedFields[fieldIndex].name + '] ');
+
+					var typeOfName = typeof(loopModelType.attachedFields[fieldIndex]);
+
+					switch (typeof(loopModelType.attachedFields[fieldIndex])) {
+
+
+					}
+				}
+
+				sqlScript.push(');');
+			});
 		},
 
 
@@ -130,7 +179,7 @@
 
 
 		/**
-		 * Manager namespace
+		 * Manager namespace. The manager is attached to a model type to retrieve and update data.
 		 * @type {namespace}
 		 */
 		manager: {
@@ -369,6 +418,11 @@
 			}
 
 			this.manager.model = this;
+
+			//
+			// Add ourself to the global model list
+			//
+			JSORM.modelTypes.push(this);
 		},
 
 
@@ -550,7 +604,7 @@ var Tests = function() {
 	//
 	// create a database connection
 	//
-	var database = new JSORM.Database('ducks', '1.0', 'wherearemyducks', '100000');
+	var database = new JSORM.Database('ducks2', '1.0', 'wherearemyducks', '100000');
 
 
 	//
@@ -572,6 +626,8 @@ var Tests = function() {
 	Duck.attachField(
 		new JSORM.FieldTypes.TextField('name', 50, false)
 	);
+
+	database.CreateTables();
 
 
 	//
