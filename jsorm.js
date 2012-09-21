@@ -54,28 +54,21 @@
 		 */
 		Database: function(dbName, dbVersion, dbTitle, dbBytes) {
 			if(!JSORM.initialised) {
-				//
-				// Hook up field type prototypes
-				//
-				/*JSORM.FieldTypes.BitField.prototype = new JSORM.FieldTypes.GenericField();
-				JSORM.FieldTypes.IntegerField.prototype = new JSORM.FieldTypes.GenericField();
-				JSORM.FieldTypes.DateField.prototype = new JSORM.FieldTypes.GenericField();
-				JSORM.FieldTypes.TextField.prototype = new JSORM.FieldTypes.GenericField();
-				JSORM.FieldTypes.ForeignKeyField.prototype = new JSORM.FieldTypes.GenericField();*/
 
 				JSORM.Model.prototype.attachField = function(item) {
 					this.attachedFields.push(item);
 
-					// here we need to build a ModelItemPrototype and attach the getters and setters
-					// specific to this model, dynamically
 					//
-					// Maybe we only need to put these for foreign keys
-					/*this.modelItemPrototype.__defineGetter__(item.name, function() {
-						return this.__original_data[item.name];
-					});
-					this.modelItemPrototype.__defineSetter__(item.name, function(value) {
-						this.__original_data[item.name] = value;
-					});*/
+					// ForeignKey fields need to follow the model and return properties from the associated model
+					//
+					if(item instanceof JSORM.FieldTypes.ForeignKeyField){
+						this.modelItemPrototype.__defineGetter__(item.name, function() {
+							return this.__original_data[item.name];
+						});
+						this.modelItemPrototype.__defineSetter__(item.name, function(value) {
+							this.__original_data[item.name] = value;
+						});
+					}
 				};
 				
 				//
