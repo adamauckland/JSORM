@@ -54,9 +54,34 @@
 		 */
 		Database: function(dbName, dbVersion, dbTitle, dbBytes) {
 			if(!JSORM.initialised) {
-				JSORM.Model.prototype.manager = JSORM.manager;
-				JSORM.ModelItem.prototype.Save = JSORM.Save;
-				JSORM.ModelItem.prototype.Remove = JSORM.Remove;
+				//
+				// Hook up field type prototypes
+				//
+				/*JSORM.FieldTypes.BitField.prototype = new JSORM.FieldTypes.GenericField();
+				JSORM.FieldTypes.IntegerField.prototype = new JSORM.FieldTypes.GenericField();
+				JSORM.FieldTypes.DateField.prototype = new JSORM.FieldTypes.GenericField();
+				JSORM.FieldTypes.TextField.prototype = new JSORM.FieldTypes.GenericField();
+				JSORM.FieldTypes.ForeignKeyField.prototype = new JSORM.FieldTypes.GenericField();*/
+
+				JSORM.Model.prototype.attachField = function(item) {
+					this.attachedFields.push(item);
+
+					// here we need to build a ModelItemPrototype and attach the getters and setters
+					// specific to this model, dynamically
+					//
+					// Maybe we only need to put these for foreign keys
+					/*this.modelItemPrototype.__defineGetter__(item.name, function() {
+						return this.__original_data[item.name];
+					});
+					this.modelItemPrototype.__defineSetter__(item.name, function(value) {
+						this.__original_data[item.name] = value;
+					});*/
+				};
+				
+				//
+				// Tell the datarows to use the datarows prototype to give it all the SQL methods
+				// Each method should return a datarows object fully loaded with goodies
+				JSORM.DataRows.prototype = JSORM.DataRowsPrototype;
 			}
 
 			this.config = {
@@ -107,6 +132,7 @@
 					sqlScript.push('[' + loopModelType.attachedFields[fieldIndex].name + '] ');
 
 					var typeOfName = typeof(loopModelType.attachedFields[fieldIndex]);
+					JSORM.log(typeOfName);
 
 					switch (typeof(loopModelType.attachedFields[fieldIndex])) {
 
@@ -124,6 +150,17 @@
 		 * @type {Object}
 		 */
 		FieldTypes: {
+			GenericField: function() {
+				this.getter = function() {
+					console.log('in getter');
+				};
+
+				this.setter = function(value) {
+					console.log('in setter');
+				};
+			},
+
+
 			/**
 			 * Bit Field
 			 * @param {String} name     Field name in table
@@ -179,15 +216,31 @@
 
 
 		/**
-		 * Manager namespace. The manager is attached to a model type to retrieve and update data.
+		 * DataRows object. The DataRows object is an object which has all the SQL bits on it
+		 * each function returns a DataRows object
+		 *
+		 * This is where we will store our data for chaining
 		 * @type {namespace}
 		 */
-		manager: {
+		DataRows: function() {
+			this.__dataRows = [];
+			this.__sqlScript = [];
+			this.__queryParams = [];
+		},
+
+
+		/**
+		 * DataRowsPrototype Put all the functions for the DataRows here
+		 * @type {Object}
+		 */
+		DataRowsPrototype: {
+			
+
 			/**
 			 * Create a new instance of the model
 			 * @return {Parent Model Type}
 			 */
-			Create: function() {
+			create: function() {
 				var data = {};
 				this.model.attachedFields.forEach(
 					function(__loopField) {
@@ -195,7 +248,7 @@
 					}
 				);
 
-				var result = new JSORM.ModelItem(data);
+				var result = new this.model.ModelItem(data);
 				result.model = this.model;
 
 				return result;
@@ -207,7 +260,7 @@
 			 * @param  {[type]} criteria [description]
 			 * @return {[type]}
 			 */
-			BuildSelect: function(criteria) {
+			buildSelect: function(criteria) {
 				var sqlScript = [];
 				var queryParams = [];
 				var model = this.model;
@@ -293,9 +346,9 @@
 			 * @param  {function} failureCallback Function to call on fail
 			 * @return {Parent Model Type}
 			 */
-			Get: function(criteria, successCallback, failureCallback) {
+			get: function(criteria, successCallback, failureCallback) {
 				var model = this.model;
-				var buildSelect = model.manager.BuildSelect(criteria);
+				var buildSelect = model.data.buildSelect(criteria);
 				var commandToExecute = buildSelect[0];
 				var queryParams = buildSelect[1];
 				var result = null;
@@ -345,9 +398,9 @@
 			 * @param  {function} failureCallback Function to call on fail
 			 * @return {Parent Model Type}
 			 */
-			GetAll: function(criteria, successCallback, failureCallback) {
+			where: function(criteria, successCallback, failureCallback) {
 				var model = this.model;
-				var buildSelect = model.manager.BuildSelect(criteria);
+				var buildSelect = this.buildSelect(criteria);
 				var commandToExecute = buildSelect[0];
 				var queryParams = buildSelect[1];
 				var result = [];
@@ -361,7 +414,7 @@
 						queryParams,
 						function(t, data) {
 							for(var i = 0; i < data.rows.length; i++) {
-								var newData = new JSORM.ModelItem(data.rows.item(i));
+								var newData = new model.ModelItem(data.rows.item(i));
 								newData.model = model;
 								result.push(newData);
 							}
@@ -389,53 +442,66 @@
 		 *		id: fieldname to use for the primary key
 		 *  }
 		 *
+		 * Model.data.where()
 		 */
 		Model: function(database, name, config) {
 			this.config = {
 				name: name,
-				id: 'id'
+				id: 'id',
+				table: name
 			};
 
 			this.database = database;
 			this.attachedFields = [];
+			//
+			// New instance of the datarows. This will be empty, but allow the start of chaining.
+			// NOTE: data should probably be a property which returns an Array of ModelItem objects rather
+			// than the actual DataRow objects
+			//
+			this.__defineGetter__('data', function() {
+				// empty datarows to start the chain
+				var newDataRows = new JSORM.DataRows();
+				newDataRows.model = this;
+				return newDataRows;
+			});
+			
+			//
+			// We need to build our ModelItem object and a modelItemPrototype
+			// This is basically a pseudo-type, which will be given the prototype of modelItemPrototype
+			// which gets the getters and setters hooked up
+			//
+			this.ModelItem = function (data) {
+				this.__original_data = data;
 
-			var model = this;
-			this.attachField = function(item) {
-				model.attachedFields.push(item);
+				for (var i = data.length - 1; i >= 0; i--) {
+					this[i] = data[i];
+				}
 			};
 
+			//
+			// The prototype will get connected up with the getters and setters
+			this.modelItemPrototype = {
+				save: JSORM.save,
+				remove: JSORM.remove
+			};
+			this.ModelItem.prototype = this.modelItemPrototype;
 
 			if(config !== undefined) {
 				this.config = config;
-				this.config.name = name;
+				//this.config.name = name;
 			} else {
 				//
 				// default to id
 				//
-				model.attachField(
-					new JSORM.FieldTypes.IntegerField(model.config.id, false)
+				this.attachField(
+					new JSORM.FieldTypes.IntegerField(this.config.id, false)
 				);
 			}
-
-			this.manager.model = this;
 
 			//
 			// Add ourself to the global model list
 			//
-			JSORM.modelTypes.push(this);
-		},
-
-
-		/**
-		 * Represents one row in the table
-		 * @param {Object} data Original data to populate
-		 */
-		ModelItem: function(data) {
-			this.__original_data = data;
-
-			for(var item in data) {
-				this[item] = data[item];
-			}
+			JSORM.modelTypes[name] = this;
 		},
 
 
@@ -444,7 +510,7 @@
 		 * @param {Function} successCallback Function to call on success
 		 * @param {Function} failureCallback Function to call on failure
 		 */
-		Remove: function(successCallback, failureCallback) {
+		remove: function(successCallback, failureCallback) {
 			var sqlScript = [];
 			var queryParams = [];
 			var model = this.model;
@@ -488,7 +554,7 @@
 		 * @param {[type]} successCallback [description]
 		 * @param {[type]} failureCallback [description]
 		 */
-		Save: function(successCallback, failureCallback) {
+		save: function(successCallback, failureCallback) {
 			var __changedFields = [];
 			var sqlScript = [];
 			var queryParams = [];
@@ -526,22 +592,23 @@
 				// UPDATE
 				//
 				sqlScript.push('UPDATE [' + model.config.name + '] SET ' );
+				var self = this;
 
 				model.attachedFields.forEach(
 					function(__loopField) {
 						//
 						// check if field has changed
 						//
-						if(this[__loopField.name] != this.__original_data[__loopField.name]) {
+						if(self[__loopField.name] != self.__original_data[__loopField.name]) {
 							sqlScript.push('[' + __loopField.name + ']=?');
-							queryParams.push(this[__loopField.name]);
+							queryParams.push(self[__loopField.name]);
 							changed = true;
 						}
 					}
 				);
 
 				sqlScript.push(' WHERE [' + model.config.id + ']=?');
-				queryParams.push(this[model.config.id]);
+				queryParams.push(self[model.config.id]);
 			}
 			//
 			// nothing to save
@@ -604,13 +671,13 @@ var Tests = function() {
 	//
 	// create a database connection
 	//
-	var database = new JSORM.Database('ducks2', '1.0', 'wherearemyducks', '100000');
+	var databaseConnection = new JSORM.Database('ducks', '1.0', 'wherearemyducks', '100000');
 
 
 	//
 	// open database
 	//
-	var db = database.openDatabase();
+	var db = databaseConnection.openDatabase();
 
 
 	//
@@ -627,22 +694,23 @@ var Tests = function() {
 		new JSORM.FieldTypes.TextField('name', 50, false)
 	);
 
-	database.CreateTables();
+	JSORM.CreateTables(Duck);
 
 
 	//
 	// now get the row at ID=1 in the duck table
 	//
-	Duck.manager.Get({ id: 6 },
+	Duck.data.where({ id: 6 },
 		function(data) {
 			//
 			// success, data should be the row data
 			//
 			if(data !== null) {
+				data = data[0];
 				console.log(data.name);
 				data.name = 'This is a new thing modified booa';
 
-				data.Save(function() {
+				data.save(function() {
 					console.log('saved booa');
 				}, function(error) {
 					console.log(error.message);
@@ -660,7 +728,7 @@ var Tests = function() {
 	//
 	// test to get all items with an id below 5
 	//
-	Duck.manager.GetAll( { id__lessthan: 5 }, function(data) {
+	Duck.data.where( { id__lessthan: 5 }, function(data) {
 		console.log('Number of items received: ' + data.length );
 	});
 
@@ -668,12 +736,12 @@ var Tests = function() {
 	//
 	// test to get all items with a name of adam
 	//
-	Duck.manager.GetAll( { name__contains: 'booa' }, function(data) {
+	Duck.data.where( { name__contains: 'booa' }, function(data) {
 		console.log('Number of items received for booa: ' + data.length );
 
 		console.log('removing item');
 		if(data.length !== 0) {
-			data[0].Remove(function() {
+			data[0].remove(function() {
 				// success
 				console.log('remove success');
 			}, function() {
@@ -689,9 +757,9 @@ var Tests = function() {
 	// test insert
 	//
 	console.log('testing insert');
-	var newThing = Duck.manager.Create();
+	var newThing = Duck.data.create();
 	newThing.name = 'test insert';
-	newThing.Save(function(data) {
+	newThing.save(function(data) {
 		console.log('inserted ' + newThing.id);
 	});
 };
