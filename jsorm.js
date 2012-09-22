@@ -102,13 +102,17 @@
 		},
 
 
+		/**
+		 * [CreateTables Automated SQL to build all the tables for code-first ORM usage. NOT COMPLETED
+		 * @param {[type]} model [description]
+		 */
 		CreateTables: function(model) {
 			if (!JSORM.isNewDatabase) {
 				JSORM.log('Not new database');
 				return;
 			}
 
-			JSORM.log('Is new database');
+			JSORM.log('This is a new database');
 
 			JSORM.modelTypes.forEach(function(loopModelType) {
 				JSORM.log('New model');
@@ -143,17 +147,6 @@
 		 * @type {Object}
 		 */
 		FieldTypes: {
-			GenericField: function() {
-				this.getter = function() {
-					console.log('in getter');
-				};
-
-				this.setter = function(value) {
-					console.log('in setter');
-				};
-			},
-
-
 			/**
 			 * Bit Field
 			 * @param {String} name     Field name in table
@@ -240,6 +233,7 @@
 						data[__loopField.name] = null;
 					}
 				);
+				data[this.model.config.id] = null;
 
 				var result = new this.model.ModelItem(data);
 				result.model = this.model;
@@ -323,6 +317,40 @@
 
 
 			/**
+			 * execute arbitrary SQL
+			 * @param  {[type]} commandToExecute SQL. Use ? for parameters
+			 * @param  {[type]} queryParams      Array containing the parameters for parameterising queries
+			 * @param  {[type]} successCallback  Function to call on success
+			 * @param  {[type]} failureCallback  Function to call on failure
+			 * @return {dataset}                 Whatever comes out of the executeSql command
+			 */
+			execute: function(commandToExecute, queryParams, successCallback, failureCallback) {
+				var model = this.model;
+				var result = null;
+			
+				model.database.transaction( function(tx) {
+					JSORM.log('Execute SQL: ' + commandToExecute);
+					JSORM.log('With Params: ' + queryParams);
+
+					tx.executeSql(
+						commandToExecute,
+						queryParams,
+						function(t, data) {
+							result = data;
+						},
+						function(t, error) {
+							JSORM.error(error);
+						}
+					);
+				}, function(a, error) {
+					failureCallback(error);
+				}, function() {
+					successCallback(result);
+				});
+			},
+
+
+			/**
 			 * Get a single model instance from the database
 			 * @param  {object} criteria        Field to value mapping for criteria
 			 *
@@ -347,8 +375,8 @@
 				var result = null;
 			
 				model.database.transaction( function(tx) {
-					JSORM.log(commandToExecute);
-					JSORM.log(queryParams);
+					JSORM.log('Execute SQL: ' + commandToExecute);
+					JSORM.log('With Params: ' + queryParams);
 
 					tx.executeSql(
 						commandToExecute,
@@ -399,8 +427,8 @@
 				var result = [];
 			
 				model.database.transaction( function(tx) {
-					JSORM.log(commandToExecute);
-					JSORM.log(queryParams);
+					JSORM.log('Execute SQL: ' + commandToExecute);
+					JSORM.log('With Params: ' + queryParams);
 
 					tx.executeSql(
 						commandToExecute,
@@ -466,8 +494,8 @@
 			this.ModelItem = function (data) {
 				this.__original_data = data;
 
-				for (var i = data.length - 1; i >= 0; i--) {
-					this[i] = data[i];
+				for (var loopKey in data){
+					this[loopKey] = data[loopKey];
 				}
 			};
 
@@ -517,8 +545,8 @@
 			var commandToExecute = sqlScript.join('');
 
 			model.database.transaction( function(tx) {
-				JSORM.log(commandToExecute);
-				JSORM.log(queryParams);
+				JSORM.log('Execute SQL: ' + commandToExecute);
+				JSORM.log('With Params: ' + queryParams);
 
 				tx.executeSql(
 					commandToExecute,
@@ -614,8 +642,8 @@
 			var commandToExecute = sqlScript.join('');
 
 			model.database.transaction( function(tx) {
-				JSORM.log(commandToExecute);
-				JSORM.log(queryParams);
+				JSORM.log('Execute SQL: ' + commandToExecute);
+				JSORM.log('With Params: ' + queryParams);
 
 				tx.executeSql(
 					commandToExecute,
@@ -658,7 +686,7 @@
 
 
 
-
+var Duck;
 
 var Tests = function() {
 	//
@@ -676,9 +704,20 @@ var Tests = function() {
 	//
 	// now define the tables
 	//
-	var Duck = new JSORM.Model(db, 'ducks');
+	Duck = new JSORM.Model(db, 'ducks');
 
 
+	//
+	// Create the table if we need to - note this will be automated
+	//
+	Duck.data.execute('CREATE TABLE IF NOT EXISTS "ducks" ("id" INTEGER PRIMARY KEY ASC AUTOINCREMENT,"name" TEXT);', [], carryOn, function() { });
+};
+
+
+//
+// Callback from returning from creating the table
+//
+function carryOn() {
 	// test overriding ID
 	//Duck.attachField(
 	//	new JSORM.FieldTypes.IntegerField('id', false)
@@ -693,21 +732,29 @@ var Tests = function() {
 	//
 	// now get the row at ID=1 in the duck table
 	//
-	Duck.data.where({ id: 6 },
+	Duck.data.where({ id: 1 },
 		function(data) {
 			//
 			// success, data should be the row data
 			//
 			if(data !== null) {
-				data = data[0];
-				console.log(data.name);
-				data.name = 'This is a new thing modified booa';
+				console.log('The number of items I found is ');
+				console.log(data.length);
 
-				data.save(function() {
-					console.log('saved booa');
-				}, function(error) {
-					console.log(error.message);
-				});
+				if(data.length > 0) {
+					console.log('I found a thing');
+
+					data = data[0];
+					console.log(data.name);
+					data.name = 'This is a new thing modified booa';
+
+					data.save(function() {
+						console.log('saved booa');
+					}, function(error) {
+						console.log(error.message);
+					});
+				}
+				
 			}
 		}, function(error) {
 			//
@@ -755,7 +802,7 @@ var Tests = function() {
 	newThing.save(function(data) {
 		console.log('inserted ' + newThing.id);
 	});
-};
+}
 
 
 var ducks = new Tests();
