@@ -39,7 +39,7 @@ Here's an example:
 
 
 		//
-		// now get the row at ID=1 in the duck table
+		// now get the row at ID=6 in the duck table
 		//
 		Duck.manager.Get({ id: 6 },
 			function(data) {
