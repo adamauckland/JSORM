@@ -1,14 +1,7 @@
-
-// test
-
-/*
-
- SELECT name FROM sqlite_master
-WHERE type='table'
-ORDER BY name;
- */
-
-
+// tests
+// require jQuery 
+//
+//
 $('document').ready(function() {
 
 
@@ -48,7 +41,5 @@ $('document').ready(function() {
 
 		return false;
 	});
-
-
 });
 
