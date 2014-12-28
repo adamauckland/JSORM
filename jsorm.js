@@ -284,7 +284,7 @@
 						//
 						// or: name__contains: 'fred'
 						//
-						if(criteriaItem.indexOf('__') != -1) {
+						if(criteriaItem.indexOf('__') !== -1) {
 							switch(criteriaItem.split('__')[1].toLowerCase()) {
 								case 'lessthan':
 									operator = '<';
@@ -552,7 +552,7 @@
 					commandToExecute,
 					queryParams,
 					function(t, data) {
-						if(data.rowsAffected == 1) {
+						if(data.rowsAffected === 1) {
 
 						}
 					},
@@ -619,7 +619,7 @@
 						//
 						// check if field has changed
 						//
-						if(self[__loopField.name] != self.__original_data[__loopField.name]) {
+						if(self[__loopField.name] !== self.__original_data[__loopField.name]) {
 							sqlScript.push('[' + __loopField.name + ']=?');
 							queryParams.push(self[__loopField.name]);
 							changed = true;
@@ -648,7 +648,7 @@
 					commandToExecute,
 					queryParams,
 					function(t, data) {
-						if(data.rowsAffected == 1) {
+						if(data.rowsAffected === 1) {
 							if(data.insertId !== undefined) {
 								this[model.config.id] = data.insertId;
 							}
