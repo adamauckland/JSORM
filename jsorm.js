@@ -1,6 +1,6 @@
 
 (function(globals, console){
-	"use strict";
+	'use strict';
 
 	/**
 	 * A JavaScript ORM for the Local Database storage.
@@ -70,7 +70,7 @@
 						});
 					}
 				};
-				
+
 				//
 				// Tell the datarows to use the datarows prototype to give it all the SQL methods
 				// Each method should return a datarows object fully loaded with goodies
@@ -84,7 +84,7 @@
 				bytes: dbBytes
 			};
 			var self = this;
-			
+
 			this.createDatabase = function() {
 				console.log('No database');
 				JSORM.isNewDatabase = true;
@@ -106,7 +106,7 @@
 		 * [CreateTables Automated SQL to build all the tables for code-first ORM usage. NOT COMPLETED
 		 * @param {[type]} model [description]
 		 */
-		CreateTables: function(model) {
+		CreateTables: function() {
 			if (!JSORM.isNewDatabase) {
 				JSORM.log('Not new database');
 				return;
@@ -220,7 +220,7 @@
 		 * @type {Object}
 		 */
 		DataRowsPrototype: {
-			
+
 
 			/**
 			 * Create a new instance of the model
@@ -251,7 +251,7 @@
 				var sqlScript = [];
 				var queryParams = [];
 				var model = this.model;
-				
+
 				sqlScript.push('SELECT ');
 
 				for(var fieldIndex = 0; fieldIndex < model.attachedFields.length; fieldIndex++) {
@@ -327,7 +327,7 @@
 			execute: function(commandToExecute, queryParams, successCallback, failureCallback) {
 				var model = this.model;
 				var result = null;
-			
+
 				model.database.transaction( function(tx) {
 					JSORM.log('Execute SQL: ' + commandToExecute);
 					JSORM.log('With Params: ' + queryParams);
@@ -373,7 +373,7 @@
 				var commandToExecute = buildSelect[0];
 				var queryParams = buildSelect[1];
 				var result = null;
-			
+
 				model.database.transaction( function(tx) {
 					JSORM.log('Execute SQL: ' + commandToExecute);
 					JSORM.log('With Params: ' + queryParams);
@@ -382,7 +382,7 @@
 						commandToExecute,
 						queryParams,
 						function(t, data) {
-							if(data.rows.length == 1) {
+							if(data.rows.length === 1) {
 								result = new JSORM.ModelItem(data.rows.item(0));
 								result.model = model;
 							}
@@ -425,7 +425,7 @@
 				var commandToExecute = buildSelect[0];
 				var queryParams = buildSelect[1];
 				var result = [];
-			
+
 				model.database.transaction( function(tx) {
 					JSORM.log('Execute SQL: ' + commandToExecute);
 					JSORM.log('With Params: ' + queryParams);
@@ -485,7 +485,7 @@
 				newDataRows.model = this;
 				return newDataRows;
 			});
-			
+
 			//
 			// We need to build our ModelItem object and a modelItemPrototype
 			// This is basically a pseudo-type, which will be given the prototype of modelItemPrototype
@@ -553,7 +553,7 @@
 					queryParams,
 					function(t, data) {
 						if(data.rowsAffected == 1) {
-							
+
 						}
 					},
 					function(t, error) {
@@ -576,7 +576,6 @@
 		 * @param {[type]} failureCallback [description]
 		 */
 		save: function(successCallback, failureCallback) {
-			var __changedFields = [];
 			var sqlScript = [];
 			var queryParams = [];
 			var changed = false;
@@ -668,7 +667,7 @@
 	};
 
 	var JSORM = globals.JSORM;
-})(window, console);
+})(window, window.console);
 
 
 
